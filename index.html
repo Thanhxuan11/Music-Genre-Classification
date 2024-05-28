@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phân loại âm thanh</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        h1 {
+            text-align: center;
+            color: #007bff;
+        }
+
+        .container {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+
+        .box {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 45%;
+        }
+
+        #upload-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        #upload-input {
+            display: none;
+        }
+
+        .upload-label {
+            width: 200px;
+            padding: 10px;
+            text-align: center;
+            background-color: #007bff;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        #upload-button {
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        #upload-button:hover {
+            background-color: #218838;
+        }
+
+        #results-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #classification-label {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        #classification-result {
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        #progress-bar {
+            width: 200px;
+            height: 20px;
+            background-color: #ccc;
+            border: 1px solid #ddd;
+            margin-bottom: 10px;
+        }
+
+        #progress-bar-fill {
+            width: 0%;
+            height: 100%;
+            background-color: #007bff;
+            transition: width 0.5s ease;
+        }
+
+        audio {
+            margin-top: 10px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <h1>Phân loại âm thanh <i class="fas fa-music"></i></h1>
+
+    <div class="container">
+        <div class="box" id="upload-box">
+            <h2>Tải lên âm thanh <i class="fas fa-upload"></i></h2>
+            <div id="upload-container">
+                <label for="upload-input" class="upload-label" id="upload-label">
+                    <i class="fas fa-upload"></i> Chọn tệp âm thanh
+                </label>
+                <input type="file" id="upload-input" accept="audio/*" style="display: none;">
+                <button id="upload-button"><i class="fas fa-paper-plane"></i> Tải lên</button>
+                
+            </div>
+        </div>
+
+        <div class="box" id="results-box">
+            <h2>Kết quả phân loại <i class="fas fa-info-circle"></i></h2>
+            <div id="results-container">
+                <p id="classification-label">Phân loại:</p>
+                <p id="classification-result"></p>
+                <div id="progress-bar">
+                    <div id="progress-bar-fill"></div>
+                </div>
+                <audio id="audio-player" controls></audio>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const uploadInput = document.getElementById('upload-input');
+        const uploadLabel = document.getElementById('upload-label');
+        const uploadButton = document.getElementById('upload-button');
+        const classificationLabel = document.getElementById('classification-label');
+        const classificationResult = document.getElementById('classification-result');
+        const progressBar = document.getElementById('progress-bar');
+        const progressBarFill = document.getElementById('progress-bar-fill');
+        const audioPlayer = document.getElementById('audio-player');
+        uploadInput.addEventListener('change', () => {
+            const files = uploadInput.files;
+            if (files.length > 0) {
+                uploadLabel.textContent = `Tệp đã chọn: ${files[0].name}`;
+            } else {
+                uploadLabel.textContent = 'Chọn tệp âm thanh';
+            }
+        });
+        uploadButton.addEventListener('click', async () => {
+            const file = uploadInput.files[0];
+            if (!file) {
+                return;
+            }
+
+            // Display "Uploading..." message
+            classificationLabel.textContent = 'Đang tải lên...';
+            classificationResult.textContent = '';
+            progressBarFill.style.width = '0%';
+
+            // Send file to server for classification using Fetch API
+            const formData = new FormData();
+            formData.append('audioFile', file);
+
+            try {
+                const response = await fetch('/classify', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const predictedGenre = data.genre;
+                    const predictedProbability = data.probability;
+                    const filePath = data.file_path;
+
+                    // Update classification result
+                    classificationLabel.textContent = 'Phân loại:';
+                    classificationResult.textContent = `${predictedGenre} (${predictedProbability.toFixed(2)}%)`;
+                    progressBarFill.style.width = '100%';
+
+                    // Update audio player
+                    audioPlayer.src = filePath;
+                    audioPlayer.style.display = 'block';
+                } else {
+                    alert('Lỗi phân loại âm thanh. Vui lòng thử lại.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Lỗi phân loại âm thanh. Vui lòng thử lại.');
+            }
+        });
+    </script>
+</body>
+</html>
